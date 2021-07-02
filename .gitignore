@@ -1,0 +1,6 @@
+__pycache__
+.vscode
+env
+ports.json
+models.py
+test.py
