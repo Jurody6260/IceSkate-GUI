@@ -31,7 +31,7 @@ def create_user(RFID, name, timing):
         session.add(usr)
         session.commit()
         if len(session.query(User).all()) > 0:
-            show_users()
+            show_users(session)
     else:
         print('PUSTO')
 
@@ -114,7 +114,7 @@ rfid_ef = tk.Entry(fr_b_usr)
 rfid_ef.grid(column=1, row=2, padx=2, pady=2)
 
 name_btn = tk.Button(fr_b_usr, text='ДОБАВИТЬ',
-                     command=lambda: [create_user(RFID=rfid_ef.get(), name=name_ef.get(), timing=30 if time_cbb.get() == "На 30 мин" else 60), show_users()])
+                     command=lambda: [create_user(RFID=rfid_ef.get(), name=name_ef.get(), timing=30 if time_cbb.get() == "На 30 мин" else 60), show_users(session)])
 name_btn.grid(column=2, row=3, padx=2, pady=2)
 
 lbl = tk.Label(fr_t_act, text="ПОСЕТИТЕЛИ",
@@ -122,7 +122,7 @@ lbl = tk.Label(fr_t_act, text="ПОСЕТИТЕЛИ",
 lbl.place(x=123, y=20, anchor='center')
 
 
-def show_users():
+def show_users(session):
     col = 0
     row = 1
     try:
@@ -151,9 +151,8 @@ def show_actions(session):
                 fr_b_act, text=f"{person.name} \
 {'Вошел' if i.is_entry else 'Вышел'} \
 в {i.action_time.strftime('%H:%M:%S')} \
-куплено: {person.timing} мин \
-{'' if i.is_entry else 'пробыл: ' + str(round((session.query(Action).filter_by(user_id=i.user_id).order_by(Action.id.desc()).first().action_time - session.query(Action).filter_by(user_id=i.user_id).first().action_time).seconds / 60, 2)) + ' мин' }\
-{'' if i.left_on_time else 'ПРОСРОЧЕНО'}")
+{'' if i.is_entry else ' пробыл: ' + str(round((session.query(Action).filter_by(user_id=i.user_id).order_by(Action.id.desc()).first().action_time - session.query(Action).filter_by(user_id=i.user_id).first().action_time).seconds / 60)) + ' мин' }\
+{'' if i.left_on_time else ' ПРОСРОЧЕНО на ' + str(round((session.query(Action).filter_by(user_id=i.user_id).order_by(Action.id.desc()).first().action_time - session.query(Action).filter_by(user_id=i.user_id).first().action_time).seconds / 60) - person.timing) + ' мин'}")
             e.grid(row=row, column=col, padx=5, pady=5, sticky=tk.NSEW)
             col += 1
             if col % 1 == 0:
@@ -296,8 +295,8 @@ def on_closing():
     win.destroy()
 
 
-show_actions()
-show_users()
+show_actions(session)
+show_users(session)
 
 win.protocol("WM_DELETE_WINDOW", on_closing)
 win.mainloop()
