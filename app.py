@@ -8,7 +8,38 @@ from json import load, dump
 import serial
 from time import sleep
 import threading
+import pandas as pd
+import calendar
 fp = functools.partial
+
+
+try:
+    with open('config.json') as json_file:
+        data2 = load(json_file)
+        data_config = data2
+except Exception:
+    uyi = [{'can_be_late_min': '10'}]
+    with open('config.json', 'w') as outfile:
+        dump(uyi, outfile)
+finally:
+    with open('config.json') as json_file:
+        data2 = load(json_file)
+        data_config = data2
+
+
+def export_excel(name, year, month):
+    if name != '':
+        try:
+            writer = pd.ExcelWriter(name + '.xlsx')
+            num_days = calendar.monthrange(year, month)[1]
+            uuids = []
+            for id in session.query(Action.user_id).all():
+                if id.user_id not in uuids:
+                    uuids.append(id.user_id)
+            dfs = []
+            uuids.sort()
+        except Exception as e:
+            print(f'export err: {str(e)}')
 
 
 def _on_mouse_wheel(canv, event):
@@ -39,7 +70,7 @@ def create_user(RFID, name, timing):
 def create_action(id, gate, session):
     def enter_leave(gate):
         if not gate:
-            if ((datetime.now() - session.query(Action).filter_by(user_id=id).first().action_time) / 60).seconds > session.query(User).filter_by(id=id).first().timing + 10:
+            if ((datetime.now() - session.query(Action).filter_by(user_id=id).first().action_time) / 60).seconds > int(session.query(User).filter_by(id=id).first().timing + data_config[0]['can_be_late_min']):
                 return False
             else:
                 return True
@@ -76,23 +107,58 @@ tab_parent = ttk.Notebook(win)
 
 tab1 = ttk.Frame(tab_parent)
 tab2 = ttk.Frame(tab_parent)
+tab3 = ttk.Frame(tab_parent)
+
 tab_parent.add(tab1, text="Добавить посетителя")
 tab_parent.add(tab2, text="Действия")
+tab_parent.add(tab3, text="Статистика")
 tab_parent.pack(expand=1, fill="both")
+
 fr_t_usr = tk.Frame(tab1, bg='orange', bd=5)
 fr_t_usr.place(relx=0.25, rely=0.015, relwidth=0.5, relheight=0.08)
 fr_b_usr = tk.Frame(tab1, bg='grey', bd=5)
 fr_b_usr.place(relx=0.1, rely=0.1, relwidth=0.8, relheight=0.2)
 fr_all_usr = tk.Frame(tab1, bg='orange', bd=5)
 fr_all_usr.place(relx=0.1, rely=0.3, relwidth=0.8, relheight=0.5)
+
 fr_t_act = tk.Frame(tab2, bg='orange', bd=5)
 fr_t_act.place(relx=0.25, rely=0.015, relwidth=0.5, relheight=0.08)
 fr_b_act = tk.Frame(tab2, bg='grey', bd=5)
 fr_b_act.place(relx=0.1, rely=0.1, relwidth=0.8, relheight=0.5)
 
+fr_t_stat = tk.Frame(tab3, bg='orange', bd=5)
+fr_t_stat.place(relx=0.25, rely=0.015, relwidth=0.5, relheight=0.08)
+fr_b_stat = tk.Frame(tab3, bg='grey', bd=5)
+fr_b_stat.place(relx=0.1, rely=0.1, relwidth=0.8, relheight=0.5)
+lbl = tk.Label(fr_t_stat, text="СТАТИСТИКА",
+               width=lbl_width*2, font=(lbl_font), borderwidth=0, bg='orange')
+lbl.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+lbl = tk.Label(fr_b_stat, text="FILE NAME",
+               width=lbl_width, font=(lbl_font), borderwidth=0, bg='orange')
+lbl.grid(column=0, row=0)
+e_f_exc_file = tk.Entry(fr_b_stat, bg='white', font=30)
+e_f_exc_file.grid(column=1, row=0)
+
+lbl = tk.Label(fr_b_stat, text="YEAR",
+               width=lbl_width, font=(lbl_font), borderwidth=0, bg='orange')
+lbl.grid(column=0, row=1)
+e_f_year = tk.Entry(fr_b_stat, bg='white', font=30)
+e_f_year.grid(column=1, row=1)
+e_f_year.insert(0, datetime.now().strftime("%Y"))
+
+month_lbl = tk.Label(fr_b_stat, text="MONTH", width=lbl_width, borderwidth=0)
+month_lbl.grid(column=0, row=3)
+e_f_month = tk.Entry(fr_b_stat, bg='white', font=30)
+e_f_month.grid(column=1, row=3)
+e_f_month.insert(0, datetime.now().strftime("%m"))
+
+export_btn = tk.Button(fr_b_stat, text='Export data', command=lambda: [
+                       export_excel(e_f_exc_file.get(), e_f_year.get(), e_f_month.get())])
+
 lbl = tk.Label(fr_t_usr, text="ДОБАВИТЬ ПОСЕТИТЕЛЯ",
                width=lbl_width*2, font=(lbl_font), borderwidth=0, bg='orange')
-lbl.place(x=123, y=20, anchor='center')
+lbl.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
 lbl = tk.Label(fr_b_usr, text='ИМЯ', width=lbl_width, bd=0)
 lbl.grid(column=0, row=0, padx=2, pady=2)
